@@ -57,7 +57,11 @@ stages:
                       ACR_USER=$(az acr credential show --name "$(ACR_NAME)" --query username -o tsv)
                       ACR_PASS=$(az acr credential show --name "$(ACR_NAME)" --query "passwords[0].value" -o tsv)
                       SECURE_ENV=(ConnectionStrings__ConsertaAi="$SQL_CONNECTION_STRING" JWT_SECRET="$JWT_SECRET")
-                      [[ -n "${MONGO_URI:-}" ]] && SECURE_ENV+=(MongoDbSettings__ConnectionString="$MONGO_URI")
+                      # Se a variável MONGO_URI não existir no Variable Group, o Azure DevOps entrega o texto literal "$(MONGO_URI)":
+                      # nesse caso o MongoDB é ignorado e a linha do tempo fica em memória (a API continua funcionando)
+                      if [[ -n "${MONGO_URI:-}" && "${MONGO_URI}" != *'$(MONGO_URI)'* ]]; then
+                        SECURE_ENV+=(MongoDbSettings__ConnectionString="$MONGO_URI")
+                      fi
 
                       az container create \
                         --resource-group "$(RESOURCE_GROUP)" --name "$(ACI_NAME)" \
