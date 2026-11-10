@@ -552,3 +552,21 @@ A identificação completa (RM, nome e turma) está em [`integrantes.txt`](integ
 
 ---
 
+## 15. Declaração de uso de IA generativa
+
+Ferramenta utilizada: **Claude Code (Anthropic)**.
+
+| Onde a IA auxiliou | Como |
+|---|---|
+| **README** | Organização, redação e revisão desta documentação: arquitetura, tabela de requisitos, conceitos das aulas, instruções de execução, exemplos de requisição e roteiro de demonstração |
+| Código da API | Apoio na estruturação da solução em camadas e na geração do código-base dos endpoints, serviços, repositórios e middlewares |
+| Testes | Apoio na escrita dos testes unitários e de integração com xUnit, Moq e FluentAssertions |
+| Depuração | Explicação de erros de compilação, de testes e de configuração |
+
+**O que o grupo fez:**
+- Definiu a ideia do Conserta Aí, as regras de negócio e o contrato entre as APIs.
+- Revisou o código e a documentação.
+- Executou os testes automatizados (`dotnet test`) e testou manualmente todos os fluxos no Swagger.
+
+Os integrantes conseguem explicar cada componente da solução na apresentação, conforme a regra da Global Solution.
+
