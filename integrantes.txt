@@ -1,0 +1,11 @@
+GLOBAL SOLUTION 2026/2 - CitizenTech
+Disciplina: Advanced Business Development with .NET
+Projeto: Conserta Aí - API .NET (participação cidadã: apoios e comentários)
+
+Repositório GitHub: https://github.com/USUARIO/REPOSITORIO   <-- PREENCHER COM O LINK DO REPOSITÓRIO
+
+Integrantes (RM - Nome completo - Turma):
+RM556649 - Matheus Arazin de Oliveira - 2TDSPV
+RM565597 - Artur Pioli Silva - 2TDSPV
+RM563454 - Kevin Martins Campos - 2TDSPV
+RM566058 - Pedro Gabriel Claes - 2TDSPV

@@ -1,0 +1,25 @@
+# Build
+bin/
+obj/
+out/
+publish/
+TestResults/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# Zips gerados para envio (não fazem parte do código)
+entrega/
+
+# Logs do Serilog
+logs/
+*.log
+
+# Segredos — NUNCA versionar
+.env
+*.env
+!.env.example
+appsettings.*.local.json
+secrets.json

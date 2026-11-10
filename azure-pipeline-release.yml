@@ -1,0 +1,77 @@
+# =====================================================================================
+# Conserta Aí — API .NET — Pipeline de Release (CD)
+# Dispara automaticamente quando o pipeline de CI termina com um novo artefato na main
+# e atualiza a Azure Container Instance com a imagem recém-publicada no ACR.
+#
+# Pré-requisitos no Azure DevOps:
+#   - O pipeline de CI (azure-pipeline.yml) cadastrado com o nome definido em "source" abaixo.
+#   - Service connection Azure Resource Manager com o nome "sc-azure-consertaai".
+#   - Variable Group "consertaai-dotnet" com:
+#       ACR_NAME, ACR_LOGIN_SERVER, RESOURCE_GROUP, ACI_NAME, DNS_LABEL,
+#       JWT_ISSUER, JWT_AUDIENCE e as variáveis SECRETAS SQL_CONNECTION_STRING, JWT_SECRET, MONGO_URI (opcional).
+# =====================================================================================
+
+trigger: none
+pr: none
+
+resources:
+  pipelines:
+    - pipeline: ci
+      source: consertaai-dotnet-ci
+      trigger:
+        branches:
+          include:
+            - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: consertaai-dotnet
+  - name: imageRepository
+    value: consertaai-api-dotnet
+
+stages:
+  - stage: CD
+    displayName: Deploy na Azure Container Instance
+    jobs:
+      - deployment: Deploy
+        displayName: Atualizar ACI
+        environment: consertaai-producao
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: ci
+                  artifact: drop
+
+                - task: AzureCLI@2
+                  displayName: az container create (nova imagem)
+                  inputs:
+                    azureSubscription: sc-azure-consertaai
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      IMAGEM="$(ACR_LOGIN_SERVER)/$(imageRepository):$(resources.pipeline.ci.runID)"
+                      ACR_USER=$(az acr credential show --name "$(ACR_NAME)" --query username -o tsv)
+                      ACR_PASS=$(az acr credential show --name "$(ACR_NAME)" --query "passwords[0].value" -o tsv)
+                      SECURE_ENV=(ConnectionStrings__ConsertaAi="$SQL_CONNECTION_STRING" JWT_SECRET="$JWT_SECRET")
+                      [[ -n "${MONGO_URI:-}" ]] && SECURE_ENV+=(MongoDbSettings__ConnectionString="$MONGO_URI")
+
+                      az container create \
+                        --resource-group "$(RESOURCE_GROUP)" --name "$(ACI_NAME)" \
+                        --image "$IMAGEM" \
+                        --registry-login-server "$(ACR_LOGIN_SERVER)" --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
+                        --os-type Linux --cpu 1 --memory 1.5 --ports 8080 --dns-name-label "$(DNS_LABEL)" \
+                        --environment-variables ASPNETCORE_ENVIRONMENT=Production BancoDados__Provedor=SqlServer \
+                            JWT_ISSUER="$(JWT_ISSUER)" JWT_AUDIENCE="$(JWT_AUDIENCE)" Auth__EmissorTokenTesteHabilitado=true \
+                        --secure-environment-variables "${SECURE_ENV[@]}" \
+                        --output none
+
+                      echo "Deploy concluído: $IMAGEM"
+                      az container show --resource-group "$(RESOURCE_GROUP)" --name "$(ACI_NAME)" --query ipAddress.fqdn -o tsv
+                  env:
+                    SQL_CONNECTION_STRING: $(SQL_CONNECTION_STRING)
+                    JWT_SECRET: $(JWT_SECRET)
+                    MONGO_URI: $(MONGO_URI)

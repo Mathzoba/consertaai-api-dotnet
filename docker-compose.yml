@@ -1,0 +1,82 @@
+# =====================================================================================
+# Ambiente local completo: API .NET + Oracle + MongoDB + RabbitMQ
+#   1) cp .env.example .env   (e troque as senhas)
+#   2) docker compose up -d --build
+#   3) Swagger: http://localhost:8080/swagger   | Health: http://localhost:8080/health
+#      RabbitMQ: http://localhost:15672
+# =====================================================================================
+name: consertaai-dotnet
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:?Defina ORACLE_PASSWORD no arquivo .env}
+      APP_USER: ${ORACLE_APP_USER:-consertaai}
+      APP_USER_PASSWORD: ${ORACLE_APP_PASSWORD:?Defina ORACLE_APP_PASSWORD no arquivo .env}
+    ports:
+      - "${ORACLE_PORTA:-1521}:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  mongo:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-consertaai}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Defina MONGO_PASSWORD no arquivo .env}
+    ports:
+      - "${MONGO_PORTA:-27017}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-consertaai}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD no arquivo .env}
+    ports:
+      - "${RABBITMQ_PORTA:-5672}:5672"
+      - "${RABBITMQ_PAINEL_PORTA:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile
+    image: consertaai-api-dotnet:local
+    depends_on:
+      oracle:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      BancoDados__Provedor: Oracle
+      ConnectionStrings__ConsertaAi: "User Id=${ORACLE_APP_USER:-consertaai};Password=${ORACLE_APP_PASSWORD};Data Source=oracle:1521/FREEPDB1"
+      MongoDbSettings__ConnectionString: "mongodb://${MONGO_USER:-consertaai}:${MONGO_PASSWORD}@mongo:27017/?authSource=admin"
+      MongoDbSettings__DatabaseName: ConsertaAiDb
+      Eventos__Modo: RabbitMq
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:-consertaai}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env (mesmo valor da API Java)}
+      JWT_ISSUER: ${JWT_ISSUER:-consertaai}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-consertaai-app}
+      ApiJava__BaseUrl: ${API_JAVA_URL:-}
+      Auth__EmissorTokenTesteHabilitado: ${HABILITAR_TOKEN_TESTE:-true}
+      Observabilidade__ExportarConsole: "false"
+    ports:
+      - "${API_PORTA:-8080}:8080"

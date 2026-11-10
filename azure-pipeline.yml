@@ -1,0 +1,88 @@
+# =====================================================================================
+# Conserta Aí — API .NET — Pipeline de Build (CI)
+# Dispara somente quando há commit na main (o que acontece via merge de PR, pois a branch é protegida).
+# Etapas: restore → build → testes xUnit (resultados publicados) → publish → docker build/push no ACR → artefato.
+#
+# Pré-requisitos no Azure DevOps:
+#   - Service connection Docker Registry apontando para o ACR, com o nome definido em "acrServiceConnection".
+#   - Variable Group "consertaai-dotnet" com ACR_LOGIN_SERVER (ex.: acrconsertaai556649.azurecr.io).
+# =====================================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: consertaai-dotnet
+  - name: buildConfiguration
+    value: Release
+  - name: imageRepository
+    value: consertaai-api-dotnet
+  - name: acrServiceConnection
+    value: sc-acr-consertaai
+
+stages:
+  - stage: CI
+    displayName: Build, testes e imagem
+    jobs:
+      - job: Build
+        displayName: Build e testes
+        steps:
+          - task: UseDotNet@2
+            displayName: Instalar .NET 8 SDK
+            inputs:
+              packageType: sdk
+              version: 8.0.x
+
+          - script: dotnet restore ConsertaAi.sln
+            displayName: dotnet restore
+
+          - script: dotnet build ConsertaAi.sln --configuration $(buildConfiguration) --no-restore
+            displayName: dotnet build
+
+          - task: DotNetCoreCLI@2
+            displayName: dotnet test (xUnit unitários + integração)
+            inputs:
+              command: test
+              projects: tests/**/*.csproj
+              arguments: --configuration $(buildConfiguration) --no-build --collect "XPlat Code Coverage"
+              publishTestResults: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publicar cobertura de código
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: $(Agent.TempDirectory)/**/coverage.cobertura.xml
+
+          - script: dotnet publish src/ConsertaAi.Api/ConsertaAi.Api.csproj --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/api
+            displayName: dotnet publish
+
+          - task: Docker@2
+            displayName: Docker build e push para o ACR
+            inputs:
+              command: buildAndPush
+              containerRegistry: $(acrServiceConnection)
+              repository: $(imageRepository)
+              dockerfile: dockerfiles/Dockerfile
+              buildContext: $(Build.SourcesDirectory)
+              tags: |
+                $(Build.BuildId)
+                latest
+
+          - script: |
+              mkdir -p $(Build.ArtifactStagingDirectory)/deploy
+              cp -r scripts $(Build.ArtifactStagingDirectory)/deploy/
+              echo "$(ACR_LOGIN_SERVER)/$(imageRepository):$(Build.BuildId)" > $(Build.ArtifactStagingDirectory)/deploy/imagem.txt
+            displayName: Preparar artefato de deploy
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publicar artefato
+            inputs:
+              PathtoPublish: $(Build.ArtifactStagingDirectory)
+              ArtifactName: drop

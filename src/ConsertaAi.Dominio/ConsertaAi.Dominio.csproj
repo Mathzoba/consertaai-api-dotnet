@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Camada de Domínio: entidades, regras de negócio puras e contratos (interfaces) -->
+  <ItemGroup>
+    <!-- Necessário apenas para os atributos [BsonId]/[BsonRepresentation] da entidade Atividade (MongoDB) -->
+    <PackageReference Include="MongoDB.Bson" Version="2.30.0" />
+  </ItemGroup>
+</Project>
