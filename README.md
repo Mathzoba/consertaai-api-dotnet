@@ -37,7 +37,7 @@ Esta API .NET é a **camada de participação cidadã** do ecossistema:
 12. [Deploy no Azure (DevOps)](#12-deploy-no-azure-devops)
 13. [Variáveis de ambiente e segredos](#13-variáveis-de-ambiente-e-segredos)
 14. [Integrantes](#14-integrantes)
-15. [Declaração de uso de IA generativa](#15-declaração-de-uso-de-ia-generativa)
+15. [Uso de IA generativa](#15-uso-de-ia-generativa)
 
 ---
 
@@ -552,21 +552,21 @@ A identificação completa (RM, nome e turma) está em [`integrantes.txt`](integ
 
 ---
 
-## 15. Declaração de uso de IA generativa
+## 15. Uso de IA generativa
 
-Ferramenta utilizada: **Claude Code (Anthropic)**.
+**Concepção e especificação: grupo.** A ideia do Conserta Aí, as personas, a arquitetura (duas APIs, dois bancos e RabbitMQ), o modelo de dados, as rotas da API .NET, as regras de negócio (apoio único por cidadão, edição só pelo autor) e as decisões técnicas de cada requisito foram definidas pelo grupo no plano do projeto. Exemplos dessas decisões:
+- idempotência com `Idempotency-Key` e resposta 422;
+- rate limit de 5 POSTs por minuto;
+- JWT compartilhado com a API Java;
+- health checks com estado Degraded;
+- os casos de teste.
 
-| Onde a IA auxiliou | Como |
-|---|---|
-| **README** | Organização, redação e revisão desta documentação: arquitetura, tabela de requisitos, conceitos das aulas, instruções de execução, exemplos de requisição e roteiro de demonstração |
-| Código da API | Apoio na estruturação da solução em camadas e na geração do código-base dos endpoints, serviços, repositórios e middlewares |
-| Testes | Apoio na escrita dos testes unitários e de integração com xUnit, Moq e FluentAssertions |
-| Depuração | Explicação de erros de compilação, de testes e de configuração |
+**Padrões técnicos: material da disciplina.** SOLID, Strategy, EF Core com N:N, MongoDB com paginação, HATEOAS, JWT, Health Checks, Serilog, OpenTelemetry e xUnit/Moq seguem os exemplos das aulas.
 
-**O que o grupo fez:**
-- Definiu a ideia do Conserta Aí, as regras de negócio e o contrato entre as APIs.
-- Revisou o código e a documentação.
-- Executou os testes automatizados (`dotnet test`) e testou manualmente todos os fluxos no Swagger.
+**Ferramenta de apoio: Claude Code (Anthropic).** Usada como assistente de programação para:
+- acelerar a implementação do código e dos testes a partir das especificações do grupo;
+- explicar erros de build e de configuração;
+- revisar a escrita deste README.
 
-Os integrantes conseguem explicar cada componente da solução na apresentação, conforme a regra da Global Solution.
+**Validação: grupo.** O grupo revisou o código, executou os testes automatizados, testou manualmente todos os fluxos no Swagger e sabe explicar cada componente da solução.
 
