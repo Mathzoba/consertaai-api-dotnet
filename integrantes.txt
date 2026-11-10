@@ -2,7 +2,7 @@ GLOBAL SOLUTION 2026/2 - CitizenTech
 Disciplina: Advanced Business Development with .NET
 Projeto: Conserta Aí - API .NET (participação cidadã: apoios e comentários)
 
-Repositório GitHub: https://github.com/USUARIO/REPOSITORIO   <-- PREENCHER COM O LINK DO REPOSITÓRIO
+Repositório GitHub: https://github.com/Mathzoba/consertaai-api-dotnet.git
 
 Integrantes (RM - Nome completo - Turma):
 RM556649 - Matheus Arazin de Oliveira - 2TDSPV
