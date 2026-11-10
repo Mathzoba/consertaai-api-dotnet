@@ -37,7 +37,7 @@ Esta API .NET é a **camada de participação cidadã** do ecossistema:
 12. [Deploy no Azure (DevOps)](#12-deploy-no-azure-devops)
 13. [Variáveis de ambiente e segredos](#13-variáveis-de-ambiente-e-segredos)
 14. [Integrantes](#14-integrantes)
-15. [Declaração de uso de IA generativa](#15-declaração-de-uso-de-ia-generativa)
+
 
 ---
 
