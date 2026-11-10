@@ -499,6 +499,69 @@ Os mesmos testes rodam no CI do Azure DevOps (`azure-pipeline.yml`), com publica
 
 ## 12. Deploy no Azure (DevOps)
 
+### Desenho macro da arquitetura em nuvem
+
+```mermaid
+flowchart LR
+    DEV["👩‍💻 Desenvolvedor"]
+
+    subgraph ADO["Azure DevOps (projeto privado)"]
+        direction TB
+        BOARDS["① Azure Boards<br/>Tarefa (work item)"]
+        REPOS["② Azure Repos<br/>branch → Pull Request → main protegida"]
+        CI["③ Pipeline de Build (CI)<br/>azure-pipeline.yml<br/>restore · build · testes xUnit · docker push"]
+        ART[("Artefato drop<br/>+ resultados de teste")]
+        CD["④ Pipeline de Release (CD)<br/>azure-pipeline-release.yml"]
+        VG[["Variable Group consertaai-dotnet<br/>(segredos)"]]
+    end
+
+    subgraph AZ["Azure — rg-consertaai (criado por scripts/infra.sh)"]
+        direction TB
+        ACR[("⑤ Azure Container Registry<br/>imagem consertaai-api-dotnet:BuildId")]
+        ACI["⑥ Azure Container Instance<br/>API .NET :8080 (Swagger, /health)"]
+        SQL[("⑦ Azure SQL Database<br/>APOIO · COMENTARIO · ETIQUETA<br/>COMENTARIO_ETIQUETA · IDEMPOTENCY_KEY")]
+    end
+
+    MONGO[("MongoDB Atlas<br/>atividades (opcional)")]
+    APP["📱 App Mobile / Swagger"]
+    JAVA["API Java<br/>emite o JWT"]
+
+    DEV -- "vincula commit/PR" --> BOARDS
+    DEV -- "git push + PR" --> REPOS
+    REPOS -- "merge na main dispara" --> CI
+    CI -- "publica" --> ART
+    CI -- "docker push" --> ACR
+    ART -- "novo artefato dispara" --> CD
+    VG -. "variáveis de ambiente" .-> CI
+    VG -. "variáveis de ambiente" .-> CD
+    CD -- "az container create (nova imagem)" --> ACI
+    ACR -- "pull da imagem" --> ACI
+    ACI -- "EF Core" --> SQL
+    ACI -.-> MONGO
+    APP -- "HTTPS + Bearer JWT" --> ACI
+    JAVA -. "mesmo JWT_SECRET" .-> ACI
+```
+
+**Legenda:**
+
+| Símbolo | Significado |
+|---|---|
+| Retângulo | Serviço ou etapa que executa algo (pipeline, API, Boards, Repos) |
+| Cilindro | Armazenamento (banco de dados, registry de imagens, artefatos) |
+| Retângulo duplo | Configuração segura (Variable Group com segredos) |
+| Seta contínua | Fluxo principal de dados ou de disparo |
+| Seta tracejada | Dependência de configuração ou integração opcional |
+| ① a ⑦ | Ordem do fluxo: tarefa → código → build → release → imagem → container → banco |
+
+**Fluxo:**
+1. A tarefa é criada no **Boards**.
+2. O código é alterado numa **branch** e entra na `main` por **Pull Request**, com revisor obrigatório e work item vinculado.
+3. O merge dispara o **CI**. Ele roda os testes xUnit, publica os resultados e o artefato e envia a imagem para o **ACR**.
+4. O novo artefato dispara a **Release**, que atualiza a **Container Instance** com a imagem nova.
+5. A API no ar grava no **Azure SQL**.
+
+### Passo a passo
+
 1. **Infraestrutura:** rode `scripts/infra.sh` (Azure CLI). Ele cria:
    - o Resource Group `rg-consertaai`;
    - o Azure SQL (Server + Database);
